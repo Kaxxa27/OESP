@@ -1,24 +1,17 @@
 #include <windows.h>
 #include <regex>
+#include "RegexCheckerDef.h"
 
-#define ID_CHECK_BUTTON 1
-
-#define ID_REGEX_LABEL 2
-#define ID_REGEX_EDIT 3
-
-#define ID_TEXT_LABEL 4
-#define ID_TEXT_EDIT 5
-
-// Глобальные переменные
+// Global variables
 HWND hMainWindow;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-// Прототип функции
+
 void CreateUIElements(HINSTANCE hInstance);
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-    // Инициализация главного окна
+    // Initializing the MainWindow
     WNDCLASSEX wcex;
     wcex.cbSize = sizeof(WNDCLASSEX);
     wcex.style = CS_HREDRAW | CS_VREDRAW;
@@ -39,7 +32,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
 
-    // Создание главного окна
+    // Creating MainWindow
     hMainWindow = CreateWindow(L"SimpleApp", L"Regex Checker", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 400, 200, NULL, NULL, hInstance, NULL);
 
     if (!hMainWindow)
@@ -48,14 +41,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
 
-    // Создание элементов интерфейса (поля и кнопки)
+    // Creating interface elements (fields and buttons)
     CreateUIElements(hInstance);
 
-    // Отображение главного окна
+    // Showing MainWindow
     ShowWindow(hMainWindow, nCmdShow);
     UpdateWindow(hMainWindow);
 
-    // Основной цикл сообщений
+    // The main message loop
     MSG msg;
     while (GetMessage(&msg, NULL, 0, 0))
     {
@@ -69,19 +62,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 void CreateUIElements(HINSTANCE hInstance)
 {
 
-    // Создание label для регулярного выражения
+    // Creating a label for a regular expression
     CreateWindow(L"STATIC", L"Regex: ", WS_CHILD | WS_VISIBLE, 10, 20, 50, 20, hMainWindow, (HMENU)ID_REGEX_LABEL, hInstance, NULL);
 
-    // Создание поля для регулярного выражения
-    CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL, 65, 20, 200, 20, hMainWindow, (HMENU)ID_REGEX_EDIT, hInstance, NULL);
+    // Creating a editfield for a regular expression
+    CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER , 65, 20, 200, 20, hMainWindow, (HMENU)ID_REGEX_EDIT, hInstance, NULL);
 
-    // Создание label для текста
+    // Creating a label for a text
     CreateWindow(L"STATIC", L"Text: ", WS_CHILD | WS_VISIBLE, 10, 50, 50, 20, hMainWindow, (HMENU)ID_REGEX_LABEL, hInstance, NULL);
 
-    // Создание поля для текста
+    // Creating a editfield for a text
     CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL, 65, 50, 200, 20, hMainWindow, (HMENU)ID_TEXT_EDIT, hInstance, NULL);
 
-    // Создание кнопки
+    // Creating button
     CreateWindow(L"BUTTON", L"Check", WS_CHILD | WS_VISIBLE, 150, 80, 100, 30, hMainWindow, (HMENU)ID_CHECK_BUTTON, hInstance, NULL);
 }
 
@@ -98,25 +91,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_COMMAND:
         switch (LOWORD(wParam))
         {
-            /*     case ID_REGEX_EDIT:
-                if (HIWORD(wParam) == EN_SETFOCUS)
-                {
-                    SetWindowText(GetDlgItem(hWnd, ID_REGEX_EDIT), L"");
-                }
-                break;
-            */
         case ID_CHECK_BUTTON:
             if (HIWORD(wParam) == BN_CLICKED)
             {
-                // Получение регулярки
+                // Getting a regular expression from hRegexField
                 WCHAR regexBuffer[256];
                 GetWindowText(hRegexField, regexBuffer, sizeof(regexBuffer) / sizeof(regexBuffer[0]));
 
-                // Получение текста
+                // Getting a text from hTextField
                 WCHAR textBuffer[256];
                 GetWindowText(hTextField, textBuffer, sizeof(textBuffer) / sizeof(textBuffer[0]));
 
-                // Преобразование регулярного выражения в объект std::wregex
+                // Converting a regular expression to an std::regex object
                 std::wregex regex;
                 try
                 {
@@ -128,8 +114,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     break;
                 }
 
-                // Проверка совпадения текста с регулярным выражением
-                // Вывод результата в MessageBox
+                // Checking whether the text matches the regular expression
+                // Output of the result in MessageBox
                 if (std::regex_match(textBuffer, regex))
                 {
                     MessageBox(hWnd, L"Success", L"Result", MB_ICONINFORMATION);
