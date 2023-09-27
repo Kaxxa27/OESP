@@ -11,7 +11,7 @@ const int MAX_SPEED = 15;
 bool isLandingGear = true;
 bool isAirplaneMoving = true;
 bool isCrashed = false;
-int airplaneX = 30;
+int airplaneX = 70;
 int airplaneY = 510;
 int airplaneSpeed = 0;
 int airplaneWidth = 100;
@@ -53,7 +53,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         800, 600, NULL, NULL, hInstance, NULL);
 
     // Creating a label for a airplaneSpeed
-    CreateWindow(L"STATIC", L"0 km/h", WS_CHILD | WS_VISIBLE, 10, 20, 100, 30, hMainWnd, (HMENU)ID_SPEED_LABEL, hInstance, NULL);
+    CreateWindow(L"STATIC", L"0 km/h", WS_CHILD | WS_VISIBLE, 10, 20, 80, 20, hMainWnd, (HMENU)ID_SPEED_LABEL, hInstance, NULL);
 
     if (!hMainWnd)
     {
@@ -142,7 +142,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             HWND hSpeedLabel = GetDlgItem(hWnd, ID_SPEED_LABEL);
             if (hSpeedLabel != NULL) {
                 WCHAR speedText[16];
-                swprintf_s(speedText, L"%d km/h", airplaneSpeed);
+                swprintf_s(speedText, L"%d km/h", airplaneSpeed * 80);
                 SetWindowTextW(hSpeedLabel, speedText);
             }
         }
@@ -167,13 +167,74 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 }
 
 void DrawAirplane(HDC hdc, int x, int y, int width, int height) {
-    HBRUSH hBrush = CreateSolidBrush(RGB(255, 165, 0));
-    HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hBrush);
+    
+    // coordinates body
+    int left = x;
+    int right = x + width;
+    int top = y;
+    int bottom = y + height;
 
-    Rectangle(hdc, x, y, x + width, y + height);
+    // Drawing an airplane body
+    {
+        HBRUSH hBrush = CreateSolidBrush(RGB(255, 165, 0));
+        HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hBrush);
 
-    SelectObject(hdc, hOldBrush);
-    DeleteObject(hBrush);
+        Rectangle(hdc, left, top, right, bottom);
+
+        SelectObject(hdc, hOldBrush);
+        DeleteObject(hBrush);
+    }
+    
+    // Drawing an airplane cabin
+    {
+        HBRUSH hChordBrush = CreateSolidBrush(RGB(0, 191, 255));
+        HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hChordBrush);
+
+        // Рисование полуокружности (правой части)
+        int radius = height / 2; // Радиус полуокружности
+        int centerX = x + width;
+        int centerY = y + (height / 2);
+
+        //Arc(hdc, right - radius, top, right + radius, bottom, right, bottom, right, top);
+        Chord(hdc, right - radius, top, right + radius, bottom, right, bottom, right, top);
+        //Pie(hdc, right - radius, top, right + radius, bottom, right, bottom, right, top);
+
+        SelectObject(hdc, hOldBrush);
+        DeleteObject(hChordBrush);
+    }
+
+    // Drawing an airplane tail 
+    {
+        HBRUSH hChordBrush = CreateSolidBrush(RGB(255, 165, 0));
+        HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hChordBrush);
+
+        int offsetT1 = 20;
+        int offsetT2 = offsetT1 * 1.7;
+        // Creating an array of tail points
+        POINT points[] = {
+            {left, bottom},
+            {left - offsetT1, bottom - offsetT1},
+            {left - offsetT2, top - offsetT2},
+            {left, top},
+            {left, bottom}
+        };
+
+
+        // Создаем контур для закраски
+        HRGN hRegion = CreatePolygonRgn(points, sizeof(points) / sizeof(points[0]), WINDING);
+
+        // Заполняем регион цветом
+        FillRgn(hdc, hRegion, hChordBrush);
+
+        Polyline(hdc, points, sizeof(points) / sizeof(points[0]));
+
+
+        // Удаляем созданный регион и кисть
+        DeleteObject(hRegion);
+        SelectObject(hdc, hOldBrush);
+        DeleteObject(hChordBrush);
+    }
+    
 
     if (isLandingGear) {
         Ellipse(hdc, x + 10, y + height, x + 20, y + height + 10);
