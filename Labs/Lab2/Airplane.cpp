@@ -1,21 +1,20 @@
 #include <windows.h>
 #include <corecrt_wstdio.h>
-
-#define ID_MAIN_TIMER 1
-#define ID_SPEED_LABEL 2
+#include "AirplaneDef.h"
 
 HINSTANCE hInst;
 HWND hMainWnd;
 
 // Variables
-const int MAX_SPEED = 15;
-const int AIRPLANE_WIDTH = 150;
-const int AIRPLANE_HEIGHT = 50;
 bool isLandingGear = true;
 bool isAirplaneMoving = true;
 bool isCrashed = false;
+
+// Start position
 int airplaneX = 70;
 int airplaneY = 510;
+
+// Start speed
 int airplaneSpeed = 0;
 
 
@@ -140,7 +139,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             break;
         }
 
-        // Обновление текста в ID_SPEED_LABEL
+        // Updating text in ID_SPEED_LABEL
         {
             HWND hSpeedLabel = GetDlgItem(hWnd, ID_SPEED_LABEL);
             if (hSpeedLabel != NULL) {
@@ -171,7 +170,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 
 void DrawAirplane(HDC hdc, int x, int y, int width, int height) {
     
-    // coordinates body
+    // Coordinates for body
     int left = x;
     int right = x + width;
     int top = y;
@@ -193,8 +192,8 @@ void DrawAirplane(HDC hdc, int x, int y, int width, int height) {
         HBRUSH hBrush = CreateSolidBrush(RGB(0, 191, 255));
         HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hBrush);
 
-        // Рисование полуокружности (правой части)
-        int radius = height / 2; // Радиус полуокружности
+        // Drawing a semicircle (right side)
+        int radius = height / 2;
         int centerX = x + width;
         int centerY = y + (height / 2);
 
@@ -223,16 +222,16 @@ void DrawAirplane(HDC hdc, int x, int y, int width, int height) {
         };
 
 
-        // Создаем контур для закраски
+        // Creating a contour for painting
         HRGN hRegion = CreatePolygonRgn(points, sizeof(points) / sizeof(points[0]), WINDING);
 
-        // Заполняем регион цветом
+        // Fill in the region with color
         FillRgn(hdc, hRegion, hBrush);
 
         Polyline(hdc, points, sizeof(points) / sizeof(points[0]));
 
 
-        // Удаляем созданный регион и кисть
+        // Delete the created region and brush
         DeleteObject(hRegion);
         SelectObject(hdc, hOldBrush);
         DeleteObject(hBrush);
@@ -252,16 +251,16 @@ void DrawAirplane(HDC hdc, int x, int y, int width, int height) {
             {left + offsetH * 1.4, top + offsetV},
         };
 
-        // Создаем контур для закраски
+        // Creating a contour for painting
         HRGN hRegion = CreatePolygonRgn(points, sizeof(points) / sizeof(points[0]), WINDING);
 
-        // Заполняем регион цветом
+        // Fill in the region with color
         FillRgn(hdc, hRegion, hBrush);
 
         Polyline(hdc, points, sizeof(points) / sizeof(points[0]));
 
 
-        // Удаляем созданный регион и кисть
+        // Delete the created region and brush
         DeleteObject(hRegion);
         SelectObject(hdc, hOldBrush);
         DeleteObject(hBrush);
@@ -306,6 +305,7 @@ void UpdateAirplanePosition(int deltaX, int deltaY) {
     RECT clientRect;
     GetClientRect(hMainWnd, &clientRect);
 
+    // Horizontal
     if (airplaneX + 100 <= 0) {
         airplaneX = clientRect.right;
     }
@@ -313,11 +313,14 @@ void UpdateAirplanePosition(int deltaX, int deltaY) {
         airplaneX = -100;
     }
 
+    // Vertical
     if (airplaneY <= 0) {
         airplaneY = clientRect.top;
     }
     else if (airplaneY >= clientRect.bottom - (50 + AIRPLANE_HEIGHT)) {
         airplaneY = clientRect.bottom - (50 + AIRPLANE_HEIGHT);
+        
+        // Collision with the ground
         if(!isLandingGear && !isCrashed)
         {
             StopAirplaneMovement();
