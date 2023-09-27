@@ -1,15 +1,21 @@
 #include <windows.h>
+#include <corecrt_wstdio.h>
 
 #define ID_MAIN_TIMER 1
+#define ID_SPEED_LABEL 2
 
 HINSTANCE hInst;
 HWND hMainWnd;
 
-bool isLandingGear = false;
+const int MAX_SPEED = 15;
+bool isLandingGear = true;
 bool isAirplaneMoving = true;
-int airplaneX = 0;
-int airplaneY = 200;
-int airplaneSpeed = 5;
+bool isCrashed = false;
+int airplaneX = 30;
+int airplaneY = 510;
+int airplaneSpeed = 0;
+int airplaneWidth = 100;
+int airplaneHeight = 40;
 
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 void DrawAirplane(HDC hdc, int x, int y, int width, int height);
@@ -45,6 +51,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         L"Airplane Example",
         WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
         800, 600, NULL, NULL, hInstance, NULL);
+
+    // Creating a label for a airplaneSpeed
+    CreateWindow(L"STATIC", L"0 km/h", WS_CHILD | WS_VISIBLE, 10, 20, 100, 30, hMainWnd, (HMENU)ID_SPEED_LABEL, hInstance, NULL);
 
     if (!hMainWnd)
     {
@@ -89,10 +98,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 
         // Main Background the same as the system
         //FillRect(hdc, &rc, (HBRUSH)(COLOR_WINDOW + 1));
-
-        // Size
-        int airplaneWidth = 100;
-        int airplaneHeight = 40;
+    
         DrawAirplane(hdc, airplaneX, airplaneY, airplaneWidth, airplaneHeight);
 
         EndPaint(hWnd, &ps);
@@ -107,11 +113,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             break;
 
         case VK_LEFT:
+            if (airplaneSpeed > 0)
+                airplaneSpeed--;
             // Stop airplane movement
-            StopAirplaneMovement();
+            else StopAirplaneMovement();       
             break;
 
         case VK_RIGHT:
+            if (airplaneSpeed < MAX_SPEED)
+                airplaneSpeed++;
             // Start airplane movement
             StartAirplaneMovement();
             break;
@@ -125,6 +135,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             UpdateAirplanePosition(0, airplaneSpeed);
             InvalidateRect(hWnd, NULL, TRUE);
             break;
+        }
+
+        // Обновление текста в ID_SPEED_LABEL
+        {
+            HWND hSpeedLabel = GetDlgItem(hWnd, ID_SPEED_LABEL);
+            if (hSpeedLabel != NULL) {
+                WCHAR speedText[16];
+                swprintf_s(speedText, L"%d km/h", airplaneSpeed);
+                SetWindowTextW(hSpeedLabel, speedText);
+            }
         }
         break;
 
@@ -182,8 +202,15 @@ void UpdateAirplanePosition(int deltaX, int deltaY) {
     if (airplaneY + 40 <= 0) {
         airplaneY = clientRect.bottom;
     }
-    else if (airplaneY >= clientRect.bottom) {
-        airplaneY = -40;
+    else if (airplaneY >= clientRect.bottom - (50 + airplaneHeight)) {
+        airplaneY = clientRect.bottom - (50 + airplaneHeight);
+        if(!isLandingGear && !isCrashed)
+        {
+            StopAirplaneMovement();
+            isCrashed = true;
+            MessageBox(hMainWnd, L"You lost control!\nBOOM!", L"Catastrophe", MB_ICONERROR);  
+            SendMessage(hMainWnd, WM_DESTROY, 0, 0);
+        }
     }
 }
 
