@@ -7,20 +7,23 @@
 HINSTANCE hInst;
 HWND hMainWnd;
 
+// Variables
 const int MAX_SPEED = 15;
+const int AIRPLANE_WIDTH = 150;
+const int AIRPLANE_HEIGHT = 50;
 bool isLandingGear = true;
 bool isAirplaneMoving = true;
 bool isCrashed = false;
 int airplaneX = 70;
 int airplaneY = 510;
 int airplaneSpeed = 0;
-int airplaneWidth = 150;
-int airplaneHeight = 50;
 
+
+// Func
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 void DrawAirplane(HDC hdc, int x, int y, int width, int height);
-void SwitchLandingGear();
 void UpdateAirplanePosition(int deltaX, int deltaY);
+void SwitchLandingGear();
 void StartAirplaneMovement();
 void StopAirplaneMovement();
 
@@ -99,7 +102,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         // Main Background the same as the system
         //FillRect(hdc, &rc, (HBRUSH)(COLOR_WINDOW + 1));
     
-        DrawAirplane(hdc, airplaneX, airplaneY, airplaneWidth, airplaneHeight);
+        DrawAirplane(hdc, airplaneX, airplaneY, AIRPLANE_WIDTH, AIRPLANE_HEIGHT);
 
         EndPaint(hWnd, &ps);
     }
@@ -285,8 +288,10 @@ void DrawAirplane(HDC hdc, int x, int y, int width, int height) {
     
 
     if (isLandingGear) {
-        Ellipse(hdc, x + 10, y + height, x + 20, y + height + 10);
-        Ellipse(hdc, x + width - 20, y + height, x + width - 10, y + height + 10);
+        int offsetX = width / 10;
+        int offsetY = width / 10;
+        Ellipse(hdc, left + offsetX, bottom, left + offsetX * 2, bottom + offsetY);
+        Ellipse(hdc, right - offsetX * 2, bottom, right - offsetX, bottom + offsetY);
     }
 }
 
@@ -308,11 +313,11 @@ void UpdateAirplanePosition(int deltaX, int deltaY) {
         airplaneX = -100;
     }
 
-    if (airplaneY + 40 <= 0) {
-        airplaneY = clientRect.bottom;
+    if (airplaneY <= 0) {
+        airplaneY = clientRect.top;
     }
-    else if (airplaneY >= clientRect.bottom - (50 + airplaneHeight)) {
-        airplaneY = clientRect.bottom - (50 + airplaneHeight);
+    else if (airplaneY >= clientRect.bottom - (50 + AIRPLANE_HEIGHT)) {
+        airplaneY = clientRect.bottom - (50 + AIRPLANE_HEIGHT);
         if(!isLandingGear && !isCrashed)
         {
             StopAirplaneMovement();
