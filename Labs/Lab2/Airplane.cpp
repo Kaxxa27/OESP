@@ -14,8 +14,8 @@ bool isCrashed = false;
 int airplaneX = 70;
 int airplaneY = 510;
 int airplaneSpeed = 0;
-int airplaneWidth = 100;
-int airplaneHeight = 40;
+int airplaneWidth = 150;
+int airplaneHeight = 50;
 
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 void DrawAirplane(HDC hdc, int x, int y, int width, int height);
@@ -187,8 +187,8 @@ void DrawAirplane(HDC hdc, int x, int y, int width, int height) {
     
     // Drawing an airplane cabin
     {
-        HBRUSH hChordBrush = CreateSolidBrush(RGB(0, 191, 255));
-        HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hChordBrush);
+        HBRUSH hBrush = CreateSolidBrush(RGB(0, 191, 255));
+        HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hBrush);
 
         // Рисование полуокружности (правой части)
         int radius = height / 2; // Радиус полуокружности
@@ -200,13 +200,13 @@ void DrawAirplane(HDC hdc, int x, int y, int width, int height) {
         //Pie(hdc, right - radius, top, right + radius, bottom, right, bottom, right, top);
 
         SelectObject(hdc, hOldBrush);
-        DeleteObject(hChordBrush);
+        DeleteObject(hBrush);
     }
 
     // Drawing an airplane tail 
     {
-        HBRUSH hChordBrush = CreateSolidBrush(RGB(255, 165, 0));
-        HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hChordBrush);
+        HBRUSH hBrush = CreateSolidBrush(RGB(255, 165, 0));
+        HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hBrush);
 
         int offsetT1 = 20;
         int offsetT2 = offsetT1 * 1.7;
@@ -224,7 +224,7 @@ void DrawAirplane(HDC hdc, int x, int y, int width, int height) {
         HRGN hRegion = CreatePolygonRgn(points, sizeof(points) / sizeof(points[0]), WINDING);
 
         // Заполняем регион цветом
-        FillRgn(hdc, hRegion, hChordBrush);
+        FillRgn(hdc, hRegion, hBrush);
 
         Polyline(hdc, points, sizeof(points) / sizeof(points[0]));
 
@@ -232,7 +232,55 @@ void DrawAirplane(HDC hdc, int x, int y, int width, int height) {
         // Удаляем созданный регион и кисть
         DeleteObject(hRegion);
         SelectObject(hdc, hOldBrush);
-        DeleteObject(hChordBrush);
+        DeleteObject(hBrush);
+    }
+
+    // Drawing an airplane wing 
+    {
+        HBRUSH hBrush = CreateSolidBrush(RGB(255, 165, 0));
+        HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hBrush);
+
+        int offsetH = width / 4;
+        int offsetV = height / 2;
+        // Creating an array of wing points
+        POINT points[] = {
+            {right - offsetH, top + offsetV},
+            {left + offsetH * 0.6, bottom + offsetV * 1.3},
+            {left + offsetH * 1.4, top + offsetV},
+        };
+
+        // Создаем контур для закраски
+        HRGN hRegion = CreatePolygonRgn(points, sizeof(points) / sizeof(points[0]), WINDING);
+
+        // Заполняем регион цветом
+        FillRgn(hdc, hRegion, hBrush);
+
+        Polyline(hdc, points, sizeof(points) / sizeof(points[0]));
+
+
+        // Удаляем созданный регион и кисть
+        DeleteObject(hRegion);
+        SelectObject(hdc, hOldBrush);
+        DeleteObject(hBrush);
+    }
+
+    // Drawing an airplane windows 
+    {
+        HBRUSH hBrush = CreateSolidBrush(RGB(0, 191, 255));
+        HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hBrush);
+
+        int winCount = 4;
+        int offsetH = width / winCount;
+        int offsetV = height / 2;
+
+        int offset = offsetH / 4;
+        for (size_t i = 0; i < winCount; i++)
+        {
+            Ellipse(hdc, left + i * offsetH + offset, top + offset, left + (i + 1) * offsetH - offset, top + offsetV);
+        }
+   
+        SelectObject(hdc, hOldBrush);
+        DeleteObject(hBrush);
     }
     
 
