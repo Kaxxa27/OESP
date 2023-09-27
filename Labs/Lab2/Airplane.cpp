@@ -1,11 +1,14 @@
 #include <windows.h>
 #include <corecrt_wstdio.h>
+#include <string>
 #include "AirplaneDef.h"
+
 
 HINSTANCE hInst;
 HWND hMainWnd;
 
 // Variables
+HHOOK landingGear_hKeyboardHook = NULL;
 bool isLandingGear = true;
 bool isAirplaneMoving = true;
 bool isCrashed = false;
@@ -20,11 +23,17 @@ int airplaneSpeed = 0;
 
 // Func
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
+
 void DrawAirplane(HDC hdc, int x, int y, int width, int height);
 void UpdateAirplanePosition(int deltaX, int deltaY);
 void SwitchLandingGear();
 void StartAirplaneMovement();
 void StopAirplaneMovement();
+
+// Hook func
+LRESULT CALLBACK KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam);
+void SetKeyboardHook();
+void UnhookKeyboardHook();
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 
@@ -50,7 +59,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     hMainWnd = CreateWindow(
         L"AirplaneApp",
-        L"Airplane Example",
+        L"Airplane App",
         WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
         800, 600, NULL, NULL, hInstance, NULL);
 
@@ -66,6 +75,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     ShowWindow(hMainWnd, nCmdShow);
     UpdateWindow(hMainWnd);
 
+    // Setting the hook
+    SetKeyboardHook();
+    // Setting the timer
     SetTimer(hMainWnd, ID_MAIN_TIMER, 20, NULL);
 
     MSG msg;
@@ -73,6 +85,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
+
+    // Delete the hook
+    UnhookKeyboardHook();
 
     return (int)msg.wParam;
 }
@@ -337,4 +352,64 @@ void StartAirplaneMovement() {
 
 void StopAirplaneMovement() {
     isAirplaneMoving = false;
+}
+
+// Function for processing the left hook
+LRESULT CALLBACK KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
+    if (nCode >= 0) {
+        if (wParam == WM_KEYDOWN) {
+            KBDLLHOOKSTRUCT* pKeyInfo = (KBDLLHOOKSTRUCT*)lParam;
+
+            if (pKeyInfo->vkCode == VK_SPACE) {
+                // Depending on the state of the landing gear, we output a message to Debug
+                // using ! because hook before WM 
+                if (!isLandingGear) {
+                    OutputDebugString(L"Landing Gear Deployed\n");               
+                }
+                else {
+                    OutputDebugString(L"Landing Gear Retracted\n");
+                }
+
+                //// Преобразуйте переменную time в более удобочитаемый формат
+                //int timeInSeconds = pKeyInfo->time / 1000; // Преобразуем миллисекунды в секунды
+                //int days = timeInSeconds / (60 * 60 * 24);
+                //int hours = (timeInSeconds / (60 * 60)) % 24;
+                //int minutes = (timeInSeconds / 60) % 60;
+                //int seconds = timeInSeconds % 60;
+
+                //std::wstring time = L"dd hh/mm/ss: " 
+                //    + std::to_wstring(days) + L" "
+                //    + std::to_wstring(hours) + L"/"
+                //    + std::to_wstring(minutes) + L"/"
+                //    + std::to_wstring(seconds) + L"\n";
+
+                //// Выводите переменную wstrTime в отладочную консоль
+                //OutputDebugString(time.c_str());
+
+                //// Преобразуйте переменную time в широкий формат (wstring)
+                //std::wstring wstrTime = std::to_wstring(pKeyInfo->time);
+
+                //// Выводите переменную wstrTime в отладочную консоль
+                //OutputDebugString(wstrTime.c_str());
+            }
+        }
+    }
+
+    return CallNextHookEx(landingGear_hKeyboardHook, nCode, wParam, lParam);
+}
+
+// Function for setting the left hook
+void SetKeyboardHook() {
+    landingGear_hKeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, KeyboardHookProc, NULL, 0);
+    if (landingGear_hKeyboardHook == NULL) {
+        MessageBox(NULL, L"Failed to set keyboard hook", L"Error", MB_ICONERROR);
+    }
+}
+
+// Function for removing the left hook
+void UnhookKeyboardHook() {
+    if (landingGear_hKeyboardHook != NULL) {
+        UnhookWindowsHookEx(landingGear_hKeyboardHook);
+        landingGear_hKeyboardHook = NULL;
+    }
 }
