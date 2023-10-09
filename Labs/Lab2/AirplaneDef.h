@@ -5,6 +5,8 @@
 #define ID_SPEED_LABEL 2
 
 // Constants
-const int MAX_SPEED = 15;
-const int AIRPLANE_WIDTH = 150;
-const int AIRPLANE_HEIGHT = 50;
+CONST INT MAX_SPEED = 15;
+CONST INT AIRPLANE_WIDTH = 150;
+CONST INT AIRPLANE_HEIGHT = 50;
+CONST WCHAR* fileName = L"flight_recorder.txt";
+CONST INT FILESIZE = 1048576; // 32000 click = 1 mb

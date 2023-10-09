@@ -1,9 +1,8 @@
 #include <windows.h>
 #include <corecrt_wstdio.h>
 #include <string>
+#include <fstream>
 #include "AirplaneDef.h"
-#include <fstream> // Добавляем заголовочный файл для работы с файлами
-
 
 
 HINSTANCE hInst;
@@ -11,49 +10,45 @@ HWND hMainWnd;
 
 // Variables
 HHOOK landingGear_hKeyboardHook = NULL;
-bool isLandingGear = true;
-bool isAirplaneMoving = true;
-bool isCrashed = false;
+BOOL isLandingGear = TRUE;
+BOOL isAirplaneMoving = TRUE;
+BOOL isCrashed = FALSE;
 
 // Start position
-int airplaneX = 70;
-int airplaneY = 510;
+INT airplaneX = 70;
+INT airplaneY = 510;
 
 // Start speed
-int airplaneSpeed = 0;
-
-// Filename
-CONST WCHAR* fileName = L"flight_recorder.txt";
+INT airplaneSpeed = 0;
 
 // Memory mapped file 
 HANDLE hFile = NULL;
 HANDLE hMapFile = NULL;
 LPVOID pMappedData = NULL;
-CONST INT FILESIZE = 1048576; // 32000 click = 1 mb
-size_t mappedDataSize = 0;
+SIZE_T mappedDataSize = 0;
 
 // Func
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
-void DrawAirplane(HDC hdc, int x, int y, int width, int height);
-void UpdateAirplanePosition(int deltaX, int deltaY);
-void SwitchLandingGear();
-void StartAirplaneMovement();
-void StopAirplaneMovement();
+VOID DrawAirplane(HDC hdc, INT x, INT y, INT width, INT height);
+VOID UpdateAirplanePosition(INT deltaX, INT deltaY);
+VOID SwitchLandingGear();
+VOID StartAirplaneMovement();
+VOID StopAirplaneMovement();
 
 // File func
 // Function for recording keystrokes to a file
-void RecordKeyPress(const std::string& actionString);
-void InitializeMappingFile();
-void UninitializeMappingFile();
+VOID RecordKeyPress(CONST std::string& actionString);
+VOID InitializeMappingFile();
+VOID UninitializeMappingFile();
 
 // Hook func
-LRESULT CALLBACK KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam);
-void SetKeyboardHook();
-void UnhookKeyboardHook();
+LRESULT CALLBACK KeyboardHookProc(INT nCode, WPARAM wParam, LPARAM lParam);
+VOID SetKeyboardHook();
+VOID UnhookKeyboardHook();
 
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, INT nCmdShow) {
 
     InitializeMappingFile();
 
@@ -204,13 +199,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
     return 0;
 }
 
-void DrawAirplane(HDC hdc, int x, int y, int width, int height) {
+VOID DrawAirplane(HDC hdc, INT x, INT y, INT width, INT height) {
     
     // Coordinates for body
-    int left = x;
-    int right = x + width;
-    int top = y;
-    int bottom = y + height;
+    INT left = x;
+    INT right = x + width;
+    INT top = y;
+    INT bottom = y + height;
 
     // Drawing an airplane body
     {
@@ -229,9 +224,9 @@ void DrawAirplane(HDC hdc, int x, int y, int width, int height) {
         HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hBrush);
 
         // Drawing a semicircle (right side)
-        int radius = height / 2;
-        int centerX = x + width;
-        int centerY = y + (height / 2);
+        INT radius = height / 2;
+        INT centerX = x + width;
+        INT centerY = y + (height / 2);
 
         //Arc(hdc, right - radius, top, right + radius, bottom, right, bottom, right, top);
         Chord(hdc, right - radius, top, right + radius, bottom, right, bottom, right, top);
@@ -246,8 +241,8 @@ void DrawAirplane(HDC hdc, int x, int y, int width, int height) {
         HBRUSH hBrush = CreateSolidBrush(RGB(255, 165, 0));
         HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hBrush);
 
-        int offsetT1 = 20;
-        int offsetT2 = offsetT1 * 1.7;
+        INT offsetT1 = 20;
+        INT offsetT2 = offsetT1 * 1.7;
         // Creating an array of tail points
         POINT points[] = {
             {left, bottom},
@@ -278,8 +273,8 @@ void DrawAirplane(HDC hdc, int x, int y, int width, int height) {
         HBRUSH hBrush = CreateSolidBrush(RGB(255, 165, 0));
         HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hBrush);
 
-        int offsetH = width / 4;
-        int offsetV = height / 2;
+        INT offsetH = width / 4;
+        INT offsetV = height / 2;
         // Creating an array of wing points
         POINT points[] = {
             {right - offsetH, top + offsetV},
@@ -307,11 +302,11 @@ void DrawAirplane(HDC hdc, int x, int y, int width, int height) {
         HBRUSH hBrush = CreateSolidBrush(RGB(0, 191, 255));
         HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hBrush);
 
-        int winCount = 4;
-        int offsetH = width / winCount;
-        int offsetV = height / 2;
+        INT winCount = 4;
+        INT offsetH = width / winCount;
+        INT offsetV = height / 2;
 
-        int offset = offsetH / 4;
+        INT offset = offsetH / 4;
         for (size_t i = 0; i < winCount; i++)
         {
             Ellipse(hdc, left + i * offsetH + offset, top + offset, left + (i + 1) * offsetH - offset, top + offsetV);
@@ -323,18 +318,18 @@ void DrawAirplane(HDC hdc, int x, int y, int width, int height) {
     
 
     if (isLandingGear) {
-        int offsetX = width / 10;
-        int offsetY = width / 10;
+        INT offsetX = width / 10;
+        INT offsetY = width / 10;
         Ellipse(hdc, left + offsetX, bottom, left + offsetX * 2, bottom + offsetY);
         Ellipse(hdc, right - offsetX * 2, bottom, right - offsetX, bottom + offsetY);
     }
 }
 
-void SwitchLandingGear() {
+VOID SwitchLandingGear() {
     isLandingGear = !isLandingGear;
 }
 
-void UpdateAirplanePosition(int deltaX, int deltaY) {
+VOID UpdateAirplanePosition(INT deltaX, INT deltaY) {
     airplaneX += deltaX;
     airplaneY += deltaY;
 
@@ -368,16 +363,16 @@ void UpdateAirplanePosition(int deltaX, int deltaY) {
     }
 }
 
-void StartAirplaneMovement() {
+VOID StartAirplaneMovement() {
     isAirplaneMoving = true;
 }
 
-void StopAirplaneMovement() {
+VOID StopAirplaneMovement() {
     isAirplaneMoving = false;
 }
 
 // Function for processing the left hook
-LRESULT CALLBACK KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK KeyboardHookProc(INT nCode, WPARAM wParam, LPARAM lParam) {
     if (nCode >= 0) {
         if (wParam == WM_KEYDOWN) {
             KBDLLHOOKSTRUCT* pKeyInfo = (KBDLLHOOKSTRUCT*)lParam;
@@ -419,7 +414,7 @@ LRESULT CALLBACK KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 }
 
 // Function for setting the left hook
-void SetKeyboardHook() {
+VOID SetKeyboardHook() {
     landingGear_hKeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, KeyboardHookProc, NULL, 0);
     if (landingGear_hKeyboardHook == NULL) {
         MessageBox(NULL, L"Failed to set keyboard hook", L"Error", MB_ICONERROR);
@@ -427,14 +422,14 @@ void SetKeyboardHook() {
 }
 
 // Function for removing the left hook
-void UnhookKeyboardHook() {
+VOID UnhookKeyboardHook() {
     if (landingGear_hKeyboardHook != NULL) {
         UnhookWindowsHookEx(landingGear_hKeyboardHook);
         landingGear_hKeyboardHook = NULL;
     }
 }
 
-void RecordKeyPress(const std::string& actionString) {
+VOID RecordKeyPress(CONST std::string& actionString) {
     if (pMappedData != NULL) {
         // Getting current time
         SYSTEMTIME currentTime;
@@ -447,7 +442,7 @@ void RecordKeyPress(const std::string& actionString) {
         std::string keyInfo =  time + " => Action: " + actionString + "\n";
    
         // Copying the information to a memory-mapped file
-        size_t dataSize = keyInfo.size() * sizeof(CHAR);
+        SIZE_T dataSize = keyInfo.size() * sizeof(CHAR);
         OutputDebugString(std::to_wstring(dataSize).c_str());
         OutputDebugString(L"\n");
 
@@ -462,7 +457,7 @@ void RecordKeyPress(const std::string& actionString) {
     }
 }
 
-void InitializeMappingFile() {
+VOID InitializeMappingFile() {
 
     // CreateFile
     hFile = CreateFile(
@@ -506,7 +501,7 @@ void InitializeMappingFile() {
     }
 }
 
-void UninitializeMappingFile() {
+VOID UninitializeMappingFile() {
  
     if (pMappedData != NULL) {
         UnmapViewOfFile(pMappedData);
