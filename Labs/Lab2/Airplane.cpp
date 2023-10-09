@@ -2,6 +2,8 @@
 #include <corecrt_wstdio.h>
 #include <string>
 #include "AirplaneDef.h"
+#include <fstream> // Добавляем заголовочный файл для работы с файлами
+
 
 
 HINSTANCE hInst;
@@ -20,6 +22,15 @@ int airplaneY = 510;
 // Start speed
 int airplaneSpeed = 0;
 
+// Filename
+CONST WCHAR* fileName = L"flight_recorder.txt";
+
+// Memory mapped file 
+HANDLE hFile = NULL;
+HANDLE hMapFile = NULL;
+LPVOID pMappedData = NULL;
+CONST INT FILESIZE = 1048576; // 32000 click 
+size_t mappedDataSize = 0;
 
 // Func
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -30,12 +41,21 @@ void SwitchLandingGear();
 void StartAirplaneMovement();
 void StopAirplaneMovement();
 
+// File func
+// Function for recording keystrokes to a file
+void RecordKeyPress(int vkCode);
+void InitializeMappingFile();
+void UninitializeMappingFile();
+
 // Hook func
 LRESULT CALLBACK KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam);
 void SetKeyboardHook();
 void UnhookKeyboardHook();
 
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+
+    InitializeMappingFile();
 
 	hInst = hInstance;
 
@@ -88,6 +108,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     // Delete the hook
     UnhookKeyboardHook();
+    UninitializeMappingFile();
 
     return (int)msg.wParam;
 }
@@ -360,6 +381,9 @@ LRESULT CALLBACK KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
         if (wParam == WM_KEYDOWN) {
             KBDLLHOOKSTRUCT* pKeyInfo = (KBDLLHOOKSTRUCT*)lParam;
 
+            // Write the pressed key to a file
+            RecordKeyPress(pKeyInfo->vkCode);
+
             if (pKeyInfo->vkCode == VK_SPACE) {
                 // Depending on the state of the landing gear, we output a message to Debug
                 // using ! because hook before WM 
@@ -369,28 +393,6 @@ LRESULT CALLBACK KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
                 else {
                     OutputDebugString(L"Landing Gear Retracted\n");
                 }
-
-                //// Преобразуйте переменную time в более удобочитаемый формат
-                //int timeInSeconds = pKeyInfo->time / 1000; // Преобразуем миллисекунды в секунды
-                //int days = timeInSeconds / (60 * 60 * 24);
-                //int hours = (timeInSeconds / (60 * 60)) % 24;
-                //int minutes = (timeInSeconds / 60) % 60;
-                //int seconds = timeInSeconds % 60;
-
-                //std::wstring time = L"dd hh/mm/ss: " 
-                //    + std::to_wstring(days) + L" "
-                //    + std::to_wstring(hours) + L"/"
-                //    + std::to_wstring(minutes) + L"/"
-                //    + std::to_wstring(seconds) + L"\n";
-
-                //// Выводите переменную wstrTime в отладочную консоль
-                //OutputDebugString(time.c_str());
-
-                //// Преобразуйте переменную time в широкий формат (wstring)
-                //std::wstring wstrTime = std::to_wstring(pKeyInfo->time);
-
-                //// Выводите переменную wstrTime в отладочную консоль
-                //OutputDebugString(wstrTime.c_str());
             }
         }
     }
@@ -411,5 +413,93 @@ void UnhookKeyboardHook() {
     if (landingGear_hKeyboardHook != NULL) {
         UnhookWindowsHookEx(landingGear_hKeyboardHook);
         landingGear_hKeyboardHook = NULL;
+    }
+}
+
+void RecordKeyPress(int vkCode) {
+    if (pMappedData != NULL) {
+        // Getting current time
+        SYSTEMTIME currentTime;
+        GetLocalTime(&currentTime);
+
+        // Forming a string with information about the time and the key
+        std::string keyInfo = "Time: " + std::to_string(currentTime.wHour) + ":" +
+            std::to_string(currentTime.wMinute) + ":" + std::to_string(currentTime.wSecond) +
+            ", Key Pressed: " + std::to_string(vkCode) + "\n";
+   
+
+        // Copying the information to a memory-mapped file
+        size_t dataSize = keyInfo.size() * sizeof(char);
+        OutputDebugString(std::to_wstring(dataSize).c_str());
+        OutputDebugString(L"\n");
+        if (mappedDataSize + dataSize < FILESIZE) {
+            memcpy((char*)pMappedData + mappedDataSize, keyInfo.c_str(), dataSize);
+            mappedDataSize += dataSize;
+        }
+        else {
+            MessageBox(NULL, L"Memory-mapped file is full", L"Error", MB_ICONERROR);
+        }
+    }
+}
+
+void InitializeMappingFile() {
+
+    // CreateFile
+    hFile = CreateFile(
+        fileName,                     // Filename
+        GENERIC_READ | GENERIC_WRITE, // Access mode (read and write)
+        0,                            // No sharing
+        NULL,                         // Default protection
+        CREATE_ALWAYS,                // Create a new file or overwrite an existing
+        FILE_ATTRIBUTE_NORMAL,        // File attributes (normal)
+        NULL                          // Template for creating files
+    );
+
+    if (hFile == INVALID_HANDLE_VALUE) {
+        MessageBox(NULL, L"CreateFile failed!", L"Error", MB_ICONERROR);
+        return;
+    }
+
+    // CreateFileMapping
+    hMapFile = CreateFileMapping(
+        hFile,                       // File descriptor
+        NULL,                        // Default protection
+        PAGE_READWRITE,              // Display access mode (read and write)
+        0,                           // Display file size (0 means the whole file)
+        FILESIZE,                    // Display file size (the highest byte)
+        NULL                         // Display file name
+    );
+
+    if (hMapFile == NULL) {
+        MessageBox(NULL, L"CreateFileMapping failed!", L"Error", MB_ICONERROR);
+        CloseHandle(hFile);
+        return;
+    }
+
+    // Display the mapped file in memory
+    pMappedData = MapViewOfFile(hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, FILESIZE);
+    if (pMappedData == NULL) {
+        MessageBox(NULL, L"MapViewOfFile failed!", L"Error", MB_ICONERROR);
+        CloseHandle(hMapFile);
+        CloseHandle(hFile);
+        return;
+    }
+}
+
+void UninitializeMappingFile() {
+ 
+    if (pMappedData != NULL) {
+        UnmapViewOfFile(pMappedData);
+        pMappedData = NULL;
+    }
+
+    if (hMapFile != NULL) {
+        CloseHandle(hMapFile);
+        hMapFile = NULL;
+    }
+
+    if (hFile != INVALID_HANDLE_VALUE) {
+        CloseHandle(hFile);
+        hFile = INVALID_HANDLE_VALUE;
     }
 }
