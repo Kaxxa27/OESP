@@ -29,7 +29,7 @@ CONST WCHAR* fileName = L"flight_recorder.txt";
 HANDLE hFile = NULL;
 HANDLE hMapFile = NULL;
 LPVOID pMappedData = NULL;
-CONST INT FILESIZE = 1048576; // 32000 click 
+CONST INT FILESIZE = 1048576; // 32000 click = 1 mb
 size_t mappedDataSize = 0;
 
 // Func
@@ -43,7 +43,7 @@ void StopAirplaneMovement();
 
 // File func
 // Function for recording keystrokes to a file
-void RecordKeyPress(int vkCode);
+void RecordKeyPress(const std::string& actionString);
 void InitializeMappingFile();
 void UninitializeMappingFile();
 
@@ -361,6 +361,7 @@ void UpdateAirplanePosition(int deltaX, int deltaY) {
         {
             StopAirplaneMovement();
             isCrashed = true;
+            RecordKeyPress("Airplane crashed. WARNING!");
             MessageBox(hMainWnd, L"You lost control!\nBOOM!", L"Catastrophe", MB_ICONERROR);  
             SendMessage(hMainWnd, WM_DESTROY, 0, 0);
         }
@@ -381,18 +382,35 @@ LRESULT CALLBACK KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
         if (wParam == WM_KEYDOWN) {
             KBDLLHOOKSTRUCT* pKeyInfo = (KBDLLHOOKSTRUCT*)lParam;
 
-            // Write the pressed key to a file
-            RecordKeyPress(pKeyInfo->vkCode);
-
-            if (pKeyInfo->vkCode == VK_SPACE) {
+            switch (pKeyInfo->vkCode) {
+            case VK_SPACE:
                 // Depending on the state of the landing gear, we output a message to Debug
                 // using ! because hook before WM 
                 if (!isLandingGear) {
-                    OutputDebugString(L"Landing Gear Deployed\n");               
+                    OutputDebugString(L"Landing Gear Deployed\n"); 
+                    RecordKeyPress("Landing Gear Deployed.");
                 }
                 else {
                     OutputDebugString(L"Landing Gear Retracted\n");
+                    RecordKeyPress("Landing Gear Retracted.");
                 }
+                break;
+            case VK_LEFT:
+                if (airplaneSpeed > 0)
+                    RecordKeyPress("Speed reduced.");
+                else RecordKeyPress("Speed equals 0.");
+                break;
+            case VK_RIGHT:
+                if (airplaneSpeed < MAX_SPEED)
+                    RecordKeyPress("Speed has increased.");
+                else RecordKeyPress("Speed equals MAX_SPEED.");
+                break;
+            case VK_UP:
+                RecordKeyPress("Airplane climb.");
+                break;
+            case VK_DOWN:
+                RecordKeyPress("Airplane landing.");
+                break;
             }
         }
     }
@@ -416,29 +434,31 @@ void UnhookKeyboardHook() {
     }
 }
 
-void RecordKeyPress(int vkCode) {
+void RecordKeyPress(const std::string& actionString) {
     if (pMappedData != NULL) {
         // Getting current time
         SYSTEMTIME currentTime;
         GetLocalTime(&currentTime);
 
-        // Forming a string with information about the time and the key
-        std::string keyInfo = "Time: " + std::to_string(currentTime.wHour) + ":" +
-            std::to_string(currentTime.wMinute) + ":" + std::to_string(currentTime.wSecond) +
-            ", Key Pressed: " + std::to_string(vkCode) + "\n";
+        // Forming a strings with information about the time and the key
+        std::string time = "Time: " + std::to_string(currentTime.wHour) + ":" +
+            std::to_string(currentTime.wMinute) + ":" + std::to_string(currentTime.wSecond);
+        
+        std::string keyInfo =  time + " => Action: " + actionString + "\n";
    
-
         // Copying the information to a memory-mapped file
-        size_t dataSize = keyInfo.size() * sizeof(char);
+        size_t dataSize = keyInfo.size() * sizeof(CHAR);
         OutputDebugString(std::to_wstring(dataSize).c_str());
         OutputDebugString(L"\n");
-        if (mappedDataSize + dataSize < FILESIZE) {
-            memcpy((char*)pMappedData + mappedDataSize, keyInfo.c_str(), dataSize);
-            mappedDataSize += dataSize;
+
+        if (mappedDataSize + dataSize >= FILESIZE)
+        {
+            UninitializeMappingFile();
+            InitializeMappingFile();
+            mappedDataSize = 0;
         }
-        else {
-            MessageBox(NULL, L"Memory-mapped file is full", L"Error", MB_ICONERROR);
-        }
+        memcpy((CHAR*)pMappedData + mappedDataSize, keyInfo.c_str(), dataSize);
+        mappedDataSize += dataSize;
     }
 }
 
