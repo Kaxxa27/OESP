@@ -36,9 +36,10 @@ VOID SwitchLandingGear();
 VOID StartAirplaneMovement();
 VOID StopAirplaneMovement();
 
-// File func
-// Function for recording keystrokes to a file
-VOID RecordKeyPress(CONST std::string& actionString);
+// File & Thread func  
+// Function for recording keystrokes to a file in separate thread
+DWORD WINAPI RecordKeyPressThread(LPVOID lpParam);
+VOID CallRecordKeyPressInThread(CONST CHAR* actionString);
 VOID InitializeMappingFile();
 VOID UninitializeMappingFile();
 
@@ -356,7 +357,7 @@ VOID UpdateAirplanePosition(INT deltaX, INT deltaY) {
         {
             StopAirplaneMovement();
             isCrashed = true;
-            RecordKeyPress("Airplane crashed. WARNING!");
+            CallRecordKeyPressInThread("Airplane crashed. WARNING!");
             MessageBox(hMainWnd, L"You lost control!\nBOOM!", L"Catastrophe", MB_ICONERROR);  
             SendMessage(hMainWnd, WM_DESTROY, 0, 0);
         }
@@ -383,28 +384,28 @@ LRESULT CALLBACK KeyboardHookProc(INT nCode, WPARAM wParam, LPARAM lParam) {
                 // using ! because hook before WM 
                 if (!isLandingGear) {
                     OutputDebugString(L"Landing Gear Deployed\n"); 
-                    RecordKeyPress("Landing Gear Deployed.");
+                    CallRecordKeyPressInThread("Landing Gear Deployed.");
                 }
                 else {
                     OutputDebugString(L"Landing Gear Retracted\n");
-                    RecordKeyPress("Landing Gear Retracted.");
+                    CallRecordKeyPressInThread("Landing Gear Retracted.");
                 }
                 break;
             case VK_LEFT:
                 if (airplaneSpeed > 0)
-                    RecordKeyPress("Speed reduced.");
-                else RecordKeyPress("Speed equals 0.");
+                    CallRecordKeyPressInThread("Speed reduced.");
+                else CallRecordKeyPressInThread("Speed equals 0.");
                 break;
             case VK_RIGHT:
                 if (airplaneSpeed < MAX_SPEED)
-                    RecordKeyPress("Speed has increased.");
-                else RecordKeyPress("Speed equals MAX_SPEED.");
+                    CallRecordKeyPressInThread("Speed has increased.");
+                else CallRecordKeyPressInThread("Speed equals MAX_SPEED.");
                 break;
             case VK_UP:
-                RecordKeyPress("Airplane climb.");
+                CallRecordKeyPressInThread("Airplane climb.");
                 break;
             case VK_DOWN:
-                RecordKeyPress("Airplane landing.");
+                CallRecordKeyPressInThread("Airplane landing.");
                 break;
             }
         }
@@ -429,7 +430,9 @@ VOID UnhookKeyboardHook() {
     }
 }
 
-VOID RecordKeyPress(CONST std::string& actionString) {
+DWORD WINAPI RecordKeyPressThread(LPVOID lpParam) {
+    std::string actionString = (CHAR*)(lpParam);
+
     if (pMappedData != NULL) {
         // Getting current time
         SYSTEMTIME currentTime;
@@ -438,13 +441,14 @@ VOID RecordKeyPress(CONST std::string& actionString) {
         // Forming a strings with information about the time and the key
         std::string time = "Time: " + std::to_string(currentTime.wHour) + ":" +
             std::to_string(currentTime.wMinute) + ":" + std::to_string(currentTime.wSecond);
-        
-        std::string keyInfo =  time + " => Action: " + actionString + "\n";
-   
+
+        std::string keyInfo = time + " => Action: " + actionString + "\n";
+
         // Copying the information to a memory-mapped file
         SIZE_T dataSize = keyInfo.size() * sizeof(CHAR);
+        OutputDebugString(L" Size of log string ");
         OutputDebugString(std::to_wstring(dataSize).c_str());
-        OutputDebugString(L"\n");
+        OutputDebugString(L" bytes\n");
 
         if (mappedDataSize + dataSize >= FILESIZE)
         {
@@ -454,6 +458,25 @@ VOID RecordKeyPress(CONST std::string& actionString) {
         }
         memcpy((CHAR*)pMappedData + mappedDataSize, keyInfo.c_str(), dataSize);
         mappedDataSize += dataSize;
+    }
+
+    return 0;
+}
+
+// Func for call RecordKeyPress in separate thread
+VOID CallRecordKeyPressInThread(CONST CHAR* actionString) {
+    HANDLE hRecordThread = CreateThread(NULL, 0, RecordKeyPressThread, (VOID*)actionString, 0, NULL);
+
+    if (hRecordThread == NULL) {
+        MessageBox(NULL, L"CreateThread failed!", L"Error", MB_ICONERROR);
+        return;
+    }
+    else {
+        // Waiting thread
+        WaitForSingleObject(hRecordThread, INFINITE);
+
+        // Close thread handle 
+        CloseHandle(hRecordThread);
     }
 }
 
