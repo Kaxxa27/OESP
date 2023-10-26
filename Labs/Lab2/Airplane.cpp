@@ -48,10 +48,17 @@ LRESULT CALLBACK KeyboardHookProc(INT nCode, WPARAM wParam, LPARAM lParam);
 VOID SetKeyboardHook();
 VOID UnhookKeyboardHook();
 
+// Registry func
+VOID SaveCoordinatesToRegistry();
+VOID LoadCoordinatesFromRegistry();
+
 
 INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, INT nCmdShow) {
 
     InitializeMappingFile();
+
+    // При запуске приложения, загрузите координаты из реестра
+    LoadCoordinatesFromRegistry();
 
 	hInst = hInstance;
 
@@ -102,9 +109,15 @@ INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         DispatchMessage(&msg);
     }
 
+    // Перед закрытием приложения, сохраните текущие координаты в реестре
+    SaveCoordinatesToRegistry();
+
+
     // Delete the hook
     UnhookKeyboardHook();
     UninitializeMappingFile();
+
+
 
     return (int)msg.wParam;
 }
@@ -357,6 +370,7 @@ VOID UpdateAirplanePosition(INT deltaX, INT deltaY) {
         {
             StopAirplaneMovement();
             isCrashed = true;
+            airplaneSpeed = 0;
             CallRecordKeyPressInThread("Airplane crashed. WARNING!");
             MessageBox(hMainWnd, L"You lost control!\nBOOM!", L"Catastrophe", MB_ICONERROR);  
             SendMessage(hMainWnd, WM_DESTROY, 0, 0);
@@ -539,5 +553,36 @@ VOID UninitializeMappingFile() {
     if (hFile != INVALID_HANDLE_VALUE) {
         CloseHandle(hFile);
         hFile = INVALID_HANDLE_VALUE;
+    }
+}
+
+// Function for writing coordinates to the registry
+VOID SaveCoordinatesToRegistry() {
+    HKEY hKey;
+    if (RegCreateKey(HKEY_CURRENT_USER, subKey, &hKey) == ERROR_SUCCESS) {
+        RegSetValueEx(hKey, valueNameX, 0, REG_DWORD, (const BYTE*)&airplaneX, sizeof(DWORD));
+        RegSetValueEx(hKey, valueNameY, 0, REG_DWORD, (const BYTE*)&airplaneY, sizeof(DWORD));
+        RegSetValueEx(hKey, valueNameSpeed, 0, REG_DWORD, (const BYTE*)&airplaneSpeed, sizeof(DWORD));
+        RegCloseKey(hKey);
+    }
+}
+
+// Function for reading coordinates from the registry
+VOID LoadCoordinatesFromRegistry() {
+    HKEY hKey;
+    if (RegOpenKey(HKEY_CURRENT_USER, subKey, &hKey) == ERROR_SUCCESS) {
+        DWORD x, y, speed;
+        DWORD dataSize = sizeof(DWORD);
+
+        if (RegQueryValueEx(hKey, valueNameX, 0, NULL, (LPBYTE)&x, &dataSize) == ERROR_SUCCESS &&
+            RegQueryValueEx(hKey, valueNameY, 0, NULL, (LPBYTE)&y, &dataSize) == ERROR_SUCCESS &&
+            RegQueryValueEx(hKey, valueNameSpeed, 0, NULL, (LPBYTE)&speed, &dataSize) == ERROR_SUCCESS)
+        {
+            airplaneX = x;
+            airplaneY = y;
+            airplaneSpeed = speed;
+        }
+
+        RegCloseKey(hKey);
     }
 }
