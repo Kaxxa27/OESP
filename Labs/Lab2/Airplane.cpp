@@ -52,6 +52,9 @@ VOID UnhookKeyboardHook();
 VOID SaveCoordinatesToRegistry();
 VOID LoadCoordinatesFromRegistry();
 
+// EventLog func
+VOID WriteToEventLog(std::wstring message);
+
 
 INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, INT nCmdShow) {
 
@@ -372,6 +375,7 @@ VOID UpdateAirplanePosition(INT deltaX, INT deltaY) {
             isCrashed = true;
             airplaneSpeed = 0;
             CallRecordKeyPressInThread("Airplane crashed. WARNING!");
+            WriteToEventLog(L"Airplane crashed. WARNING!");
             MessageBox(hMainWnd, L"You lost control!\nBOOM!", L"Catastrophe", MB_ICONERROR);  
             SendMessage(hMainWnd, WM_DESTROY, 0, 0);
         }
@@ -584,5 +588,30 @@ VOID LoadCoordinatesFromRegistry() {
         }
 
         RegCloseKey(hKey);
+    }
+}
+
+//function for writing logs to the windows event log
+VOID WriteToEventLog(std::wstring message) {
+    HANDLE hEventLog = RegisterEventSource(NULL, L"AirplaneÑrash");
+
+    if (hEventLog) {
+
+        // Getting current time
+        SYSTEMTIME currentTime;
+        GetLocalTime(&currentTime);
+
+        // Forming a strings with information about the time and the key
+        std::wstring time = L"Time: " + std::to_wstring(currentTime.wHour) + L":" +
+            std::to_wstring(currentTime.wMinute) + L":" + std::to_wstring(currentTime.wSecond);
+
+        std::wstring logMessage = time + L" => Action: " + message;
+
+        const wchar_t* messageStrings[1];
+        messageStrings[0] = logMessage.c_str();
+
+        ReportEvent(hEventLog, EVENTLOG_INFORMATION_TYPE, 0, 0, NULL, 1, 0, messageStrings, NULL);
+
+        DeregisterEventSource(hEventLog);
     }
 }
