@@ -133,6 +133,9 @@
   <ItemGroup>
     <ClInclude Include="AirplaneDef.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="flight_recorder.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

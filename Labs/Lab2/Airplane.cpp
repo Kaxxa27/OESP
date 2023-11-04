@@ -27,6 +27,11 @@ HANDLE hMapFile = NULL;
 LPVOID pMappedData = NULL;
 SIZE_T mappedDataSize = 0;
 
+// Win Event Mutex
+HANDLE hEventLogMutex = CreateMutex(NULL, FALSE, NULL);
+// Log in txt Mutex
+HANDLE hFileMutex = CreateMutex(NULL, FALSE, NULL);
+
 // Func
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
@@ -449,6 +454,9 @@ VOID UnhookKeyboardHook() {
 }
 
 DWORD WINAPI RecordKeyPressThread(LPVOID lpParam) {
+
+    WaitForSingleObject(hFileMutex, INFINITE); // Заблокировать мьютекс файла
+
     std::string actionString = (CHAR*)(lpParam);
 
     if (pMappedData != NULL) {
@@ -477,6 +485,8 @@ DWORD WINAPI RecordKeyPressThread(LPVOID lpParam) {
         memcpy((CHAR*)pMappedData + mappedDataSize, keyInfo.c_str(), dataSize);
         mappedDataSize += dataSize;
     }
+
+    ReleaseMutex(hFileMutex); // Разблокировать мьютекс файла
 
     return 0;
 }
@@ -593,6 +603,9 @@ VOID LoadCoordinatesFromRegistry() {
 
 //function for writing logs to the windows event log
 VOID WriteToEventLog(std::wstring message) {
+
+    WaitForSingleObject(hEventLogMutex, INFINITE); // Заблокировать мьютекс журнала событий
+
     HANDLE hEventLog = RegisterEventSource(NULL, L"AirplaneСrash");
 
     if (hEventLog) {
@@ -614,4 +627,6 @@ VOID WriteToEventLog(std::wstring message) {
 
         DeregisterEventSource(hEventLog);
     }
+
+    ReleaseMutex(hEventLogMutex); // Разблокировать мьютекс журнала событий
 }
