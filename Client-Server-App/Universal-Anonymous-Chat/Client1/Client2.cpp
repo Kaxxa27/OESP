@@ -10,6 +10,20 @@
 
 using namespace std;
 
+// Struct for Client Data
+struct ClientData {
+    string name;
+    int age;
+};
+
+// Info about App
+void Info()
+{
+    cout << endl << "[ Universal - Anonymus - Chat ]" << endl;
+    cout << "[ Chat Rules ]" << endl;
+    cout << "1. Do not insult other participants! " << endl;
+    cout << "2. Enter \"help\" to help you use the chat! " << endl << endl;
+}
 void SendMessagesAsync(SOCKET clientSocket) {
 
     vector<char> clientBuff(1024);
@@ -27,6 +41,17 @@ void SendMessagesAsync(SOCKET clientSocket) {
             closesocket(clientSocket);
             WSACleanup();
             return;
+        }
+
+        // Call help list (help) 
+        if (clientBuff[0] == 'h'
+            && clientBuff[1] == 'e'
+            && clientBuff[2] == 'l'
+            && clientBuff[3] == 'p') {
+
+            Info();
+
+            continue;
         }
 
         // Send the message to the server
@@ -97,6 +122,8 @@ int main(void) {
         cout << "Connection established SUCCESSFULLY. Ready to send a message to Server" << endl;
 
 
+    Info(); // Info About App
+
     //Exchange text data between Server and Client. Disconnection if a Client send "exit"
 
     vector <char> servBuff(BUFF_SIZE), clientBuff(BUFF_SIZE); // Buffers for sending and receiving data
@@ -118,7 +145,7 @@ int main(void) {
             return 1;
         }
         else if (packet_size > 0) {
-            cout << "\n\nServer message: " << servBuff.data() << endl;
+            cout << "\n\n[Anonymous] Server message: " << servBuff.data() << endl;
             cout << "Your message: ";
         }
     }

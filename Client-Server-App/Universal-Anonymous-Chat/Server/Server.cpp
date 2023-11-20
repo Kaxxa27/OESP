@@ -40,6 +40,9 @@ void HandleClient(SOCKET clientSocket, std::vector<std::shared_ptr<SOCKET>>& cli
                 clientSockets.erase(it);
             }
 
+            cout << "[DISCONNECT] Client disconnected " << endl;
+            cout << "[INFO] Number of clients on the server: " << clientSockets.size() << endl;
+
             break;
         }
 
@@ -70,7 +73,7 @@ int main()
 
     if (erStat <= 0)
     {
-        cout << "Error in IP translation to special numeric format" << endl;
+        cout << "[ERROR] Error in IP translation to special numeric format" << endl;
         return 1;
     }
 
@@ -79,23 +82,23 @@ int main()
 
     if (erStat != 0)
     {
-        cout << "Error WinSock version initialization #" << WSAGetLastError() << endl;
+        cout << "[ERROR] Error WinSock version initialization #" << WSAGetLastError() << endl;
         return 1;
     }
     else
-        cout << "WinSock initialization is OK" << endl;
+        cout << "[INITIALIZE] WinSock initialization is OK" << endl;
 
     SOCKET ServSock = socket(AF_INET, SOCK_STREAM, 0);
 
     if (ServSock == INVALID_SOCKET)
     {
-        cout << "Error initialization socket # " << WSAGetLastError() << endl;
+        cout << "[ERROR] Error initialization socket # " << WSAGetLastError() << endl;
         closesocket(ServSock);
         WSACleanup();
         return 1;
     }
     else
-        cout << "Server socket initialization is OK" << endl;
+        cout << "[INITIALIZE] Server socket initialization is OK" << endl;
 
     sockaddr_in servInfo;
     ZeroMemory(&servInfo, sizeof(servInfo));
@@ -108,26 +111,26 @@ int main()
 
     if (erStat != 0)
     {
-        cout << "Error Socket binding to server info. Error # " << WSAGetLastError() << endl;
+        cout << "[ERROR] Error Socket binding to server info. Error # " << WSAGetLastError() << endl;
         closesocket(ServSock);
         WSACleanup();
         return 1;
     }
     else
-        cout << "Binding socket to Server info is OK" << endl;
+        cout << "[INITIALIZE] Binding socket to Server info is OK" << endl;
 
     erStat = listen(ServSock, SOMAXCONN);
 
     if (erStat != 0)
     {
-        cout << "Can't start to listen to. Error # " << WSAGetLastError() << endl;
+        cout << "[ERROR] Can't start to listen to. Error # " << WSAGetLastError() << endl;
         closesocket(ServSock);
         WSACleanup();
         return 1;
     }
     else
     {
-        cout << "Listening..." << endl;
+        cout << "[LISTEN] Listening..." << endl;
     }
 
     // ¬ектор дл€ хранени€ сокетов клиентов
@@ -143,7 +146,7 @@ int main()
 
         if (ClientConn == INVALID_SOCKET)
         {
-            cout << "Client detected, but can't connect to a client. Error # " << WSAGetLastError() << endl;
+            cout << "[ERROR] Client detected, but can't connect to a client. Error # " << WSAGetLastError() << endl;
             closesocket(ServSock);
             closesocket(ClientConn);
             WSACleanup();
@@ -151,16 +154,18 @@ int main()
         }
         else
         {
-            cout << "Connection to a client established successfully" << endl;
+            cout << "[CONNECT] Connection to a client established successfully" << endl;
             char clientIP[22];
 
             inet_ntop(AF_INET, &clientInfo.sin_addr, clientIP, INET_ADDRSTRLEN);
-            cout << "Client connected with IP address " << clientIP << endl;
+            cout << "[CONNECT] Client connected with IP address " << clientIP << endl;
 
             // ƒобавл€ем сокет клиента в вектор
             std::shared_ptr<SOCKET> clientSocketPtr = std::make_shared<SOCKET>(ClientConn);
             std::lock_guard<std::mutex> lock(clientsMutex);
             clientSockets.push_back(clientSocketPtr);
+
+            cout << "[INFO] Number of clients on the server: " << clientSockets.size() << endl;
 
             // —оздаем поток дл€ обработки сообщений клиента
             std::thread clientThread(HandleClient, ClientConn, std::ref(clientSockets));

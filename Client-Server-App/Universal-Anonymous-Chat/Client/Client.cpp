@@ -33,9 +33,9 @@ void SendMessagesAsync(SOCKET clientSocket) {
         fgets(clientBuff.data(), clientBuff.size(), stdin);
 
         // Check whether the client wants to stop chatting (exit) 
-        if (clientBuff[0] == 'e' 
-            && clientBuff[1] == 'x' 
-            && clientBuff[2] == 'i' 
+        if (clientBuff[0] == 'e'
+            && clientBuff[1] == 'x'
+            && clientBuff[2] == 'i'
             && clientBuff[3] == 't') {
             shutdown(clientSocket, SD_BOTH);
             closesocket(clientSocket);
@@ -48,7 +48,7 @@ void SendMessagesAsync(SOCKET clientSocket) {
             && clientBuff[1] == 'e'
             && clientBuff[2] == 'l'
             && clientBuff[3] == 'p') {
-           
+
             Info();
 
             continue;
@@ -145,7 +145,7 @@ int main(void) {
             return 1;
         }
         else if (packet_size > 0) {
-            cout << "\n\nServer message: " << servBuff.data() << endl;
+            cout << "\n\n[Anonymous] Server message: " << servBuff.data() << endl;
             cout << "Your message: ";
         }
     }
