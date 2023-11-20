@@ -137,6 +137,7 @@ int main()
     {
         sockaddr_in clientInfo;
         int clientInfo_size = sizeof(clientInfo);
+        ZeroMemory(&clientInfo, clientInfo_size);
 
         SOCKET ClientConn = accept(ServSock, (sockaddr*)&clientInfo, &clientInfo_size);
 

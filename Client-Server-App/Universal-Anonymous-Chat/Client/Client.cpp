@@ -18,8 +18,11 @@ void SendMessagesAsync(SOCKET clientSocket) {
         cout << "Your message: ";
         fgets(clientBuff.data(), clientBuff.size(), stdin);
 
-        // Check whether the client wants to stop chatting 
-        if (clientBuff[0] == 'x' && clientBuff[1] == 'x' && clientBuff[2] == 'x') {
+        // Check whether the client wants to stop chatting (exit) 
+        if (clientBuff[0] == 'e' 
+            && clientBuff[1] == 'x' 
+            && clientBuff[2] == 'i' 
+            && clientBuff[3] == 't') {
             shutdown(clientSocket, SD_BOTH);
             closesocket(clientSocket);
             WSACleanup();
@@ -40,12 +43,11 @@ void SendMessagesAsync(SOCKET clientSocket) {
 
 int main(void) {
 
-    const char SERVER_IP[] = "127.0.0.1";					// Enter IPv4 address of Server
-    const short SERVER_PORT_NUM = 17177;				// Enter Listening port on Server side
-    const short BUFF_SIZE = 1024;					// Maximum size of buffer for exchange info between server and client
+    const char SERVER_IP[] = "127.0.0.1";	// Enter IPv4 address of Server
+    const short SERVER_PORT_NUM = 17177;	// Enter Listening port on Server side
+    const short BUFF_SIZE = 1024;			// Maximum size of buffer for exchange info between server and client
 
-    // Key variables for all program
-    int erStat;										// For checking errors in sockets functions
+    int erStat;	// For checking errors in sockets functions
 
     //IP in string format to numeric format for socket functions. Data is in "ip_to_num"
     in_addr ip_to_num;
@@ -77,7 +79,6 @@ int main(void) {
 
     // Establishing a connection to Server
     sockaddr_in servInfo;
-
     ZeroMemory(&servInfo, sizeof(servInfo));
 
     servInfo.sin_family = AF_INET;
@@ -96,16 +97,14 @@ int main(void) {
         cout << "Connection established SUCCESSFULLY. Ready to send a message to Server" << endl;
 
 
-    //Exchange text data between Server and Client. Disconnection if a Client send "xxx"
+    //Exchange text data between Server and Client. Disconnection if a Client send "exit"
 
-    vector <char> servBuff(BUFF_SIZE), clientBuff(BUFF_SIZE);							// Buffers for sending and receiving data
+    vector <char> servBuff(BUFF_SIZE), clientBuff(BUFF_SIZE); // Buffers for sending and receiving data
     short packet_size = 0;
 
-    // Создаем поток для асинхронной отправки сообщений
+    // Create thread for async sending message 
     std::thread sendThread(SendMessagesAsync, ClientSock);
 
-    //vector<char> servBuff(1024);
-   // short packet_size = 0;
 
     while (true) {
         // Receive messages from the server
@@ -113,6 +112,7 @@ int main(void) {
 
         if (packet_size == SOCKET_ERROR) {
             cout << "Can't receive message from Server. Error # " << WSAGetLastError() << endl;
+            sendThread.join();
             closesocket(ClientSock);
             WSACleanup();
             return 1;
@@ -123,7 +123,7 @@ int main(void) {
         }
     }
 
-    // Ожидаем завершения потока отправки
+    // Wait complete sendThread
     sendThread.join();
 
     closesocket(ClientSock);
