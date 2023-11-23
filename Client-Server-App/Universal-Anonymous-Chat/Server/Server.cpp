@@ -37,6 +37,7 @@ void HandleClient(SOCKET clientSocket, std::vector<std::shared_ptr<SOCKET>>& cli
 
             if (it != clientSockets.end())
             {
+
                 clientSockets.erase(it);
             }
 
